@@ -1,0 +1,15 @@
+---
+- name:  wordpress splitted to containers (web + db)
+  hosts: all
+  become: true
+
+  tasks:
+    - name: dependencies installation
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+        update_cache: yes

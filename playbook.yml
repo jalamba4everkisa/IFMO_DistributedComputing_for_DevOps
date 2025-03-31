@@ -54,7 +54,3 @@
       copy:
         src: .env
         dest: /opt/wordpress/.env
-
-    - name: docker compose run
-      community.docker.docker_compose:
-        project_src: /opt/wordpress

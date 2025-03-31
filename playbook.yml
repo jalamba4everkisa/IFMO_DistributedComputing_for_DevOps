@@ -1,0 +1,56 @@
+---
+- name:  wordpress splitted to containers (web + db)
+  hosts: all
+  become: true
+
+  tasks:
+    - name: dependencies installation
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+        update_cache: yes
+
+    - name: add docker gpg key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: add docker repo ubuntu
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu focal stable
+        state: present
+
+    - name: docker and docker compose installation
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: checking status for docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: project dir creation
+      file:
+        path: /opt/wordpress
+        state: directory
+
+    - name: copy docker-compose.yml
+      copy:
+        src: docker-compose.yml
+        dest: /opt/wordpress/docker-compose.yml
+
+    - name: copy .env file
+      copy:
+        src: .env
+        dest: /opt/wordpress/.env

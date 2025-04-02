@@ -54,3 +54,15 @@
       copy:
         src: .env
         dest: /opt/wordpress/.env
+
+    - name: remove existing containers and volumes
+      ansible.builtin.shell: |
+        docker compose down --volumes
+      args:
+        chdir: /opt/wordpress
+      ignore_errors: true
+
+    - name: run dokcer compose (v2)
+      community.docker.docker_compose_v2:
+        project_src: /opt/wordpress
+        state: present

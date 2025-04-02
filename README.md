@@ -3,22 +3,25 @@ Distributed Computing course for DevOps 2025
 
 ## Используемый стек
 
-- Ubuntu 24.04
-- Установленный Ansible 2.18.4
-- Доступ по SSH к удалённому хосту
-- Wordpress 6.7
-- MariaDB 11.7
+- **Ubuntu 24.04**
+- **Docker + Docker Compose v2**
+- **Установленный Ansible 2.18.4**
+- **Доступ по SSH к удалённому хосту**
+- **Wordpress 6.7**
+- **MariaDB 11.7**
 
 ---
 
 ## Структура проекта
 
+```
 ├── .env                  # Переменные окружения для WordPress и MariaDB
 ├── .gitignore            # Исключения для Git (например, inventory.ini)
 ├── docker-compose.yml    # Описание Docker-сервисов
 ├── LICENSE               # Файл с данными по лизении
 ├── playbook.yml          # Ansible playbook для установки и запуска
 └──  README.md             # Файл с описанием проекат
+```
 
 ---
 
@@ -28,6 +31,14 @@ Distributed Computing course for DevOps 2025
 - Переменные вынесены в `.env` для удобства конфигурации
 - Очищаются старые контейнеры перед запуском
 - Повторяемый и удобный для CI/CD подход
+
+---
+
+## Предварительные требования
+
+- Ubuntu 24.04
+- Установленный **Ansible 2.18.4+**
+- Доступ по SSH к удалённому хосту
 
 ---
 

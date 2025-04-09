@@ -17,7 +17,7 @@
           - software-properties-common
         state: present
         update_cache: yes
-      when: ansible_facts['distribution'] == "Ubuntu"
+      when: ansible_facts['os_family'] == "Ubuntu"
 
     - name: Install dependencies on RHEL-like
       dnf:
@@ -26,7 +26,7 @@
           - curl
         state: present
         update_cache: yes
-      when: ansible_facts['distribution'] in ["RedHat", "CentOS", "AlmaLinux", "Rocky"]
+      when: ansible_facts['os_family'] == "RedHat"
 
     - name: add docker gpg key
       apt_key:

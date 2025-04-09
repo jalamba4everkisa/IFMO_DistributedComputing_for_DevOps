@@ -4,7 +4,11 @@
   become: true
 
   tasks:
-    - name: dependencies installation
+    - name: Print detected OS
+      debug:
+        msg: "Detected OS: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
+
+    - name: Install dependencies on Ubuntu
       apt:
         name:
           - apt-transport-https
@@ -13,6 +17,16 @@
           - software-properties-common
         state: present
         update_cache: yes
+      when: ansible_facts['distribution'] == "Ubuntu"
+
+    - name: Install dependencies on RHEL-like
+      dnf:
+        name:
+          - dnf-plugins-core
+          - curl
+        state: present
+        update_cache: yes
+      when: ansible_facts['distribution'] in ["RedHat", "CentOS", "AlmaLinux", "Rocky"]
 
     - name: add docker gpg key
       apt_key:

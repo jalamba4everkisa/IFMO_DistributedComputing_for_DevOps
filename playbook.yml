@@ -15,6 +15,7 @@
           - ca-certificates
           - curl
           - software-properties-common
+          - python3-pip
         state: present
         update_cache: yes
       when: ansible_facts['os_family'] == "Ubuntu"
@@ -24,9 +25,16 @@
         name:
           - dnf-plugins-core
           - curl
+          - python3-pip
         state: present
         update_cache: yes
       when: ansible_facts['os_family'] == "RedHat"
+
+    - name: Install PyMySQL for Ansible MySQL modules
+      pip:
+        name: PyMySQL
+      delegate_to: localhost
+      become: false
 
     - name: add docker gpg key
       apt_key:

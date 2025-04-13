@@ -30,7 +30,7 @@
         update_cache: yes
       when: ansible_facts['os_family'] == "RedHat"
 
-    - name: Install PyMySQL for Ansible MySQL modules
+    - name: install pymysql for ansible mariadb modules
       pip:
         name: PyMySQL
       delegate_to: localhost
@@ -86,3 +86,31 @@
       community.docker.docker_compose_v2:
         project_src: /opt/wordpress
         state: present
+
+    - name: Wait for db-master to be ready
+      wait_for:
+        host: 127.0.0.1
+        port: 3306
+        delay: 5
+        timeout: 120
+
+    - name: Wait for db-slave to be ready
+      wait_for:
+        host: 127.0.0.1
+        port: 3306
+        delay: 5
+        timeout: 120
+
+    - name: Show db-master logs
+      shell: docker logs db-master | tail -n 20
+      ignore_errors: true
+
+    - name: Show db-slave logs
+      shell: docker logs db-slave | tail -n 20
+      ignore_errors: true
+
+    - name: Verify Galera status
+      shell: >
+        docker exec db-master mysql -uroot -psupersecure \
+        -e "SHOW STATUS LIKE 'wsrep_cluster_size';"
+      register: galera_status

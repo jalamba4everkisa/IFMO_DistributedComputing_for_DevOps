@@ -84,29 +84,76 @@
         tag: latest
         source: pull
       loop:
-        - mariadb
+        - bitnami/mariadb-galera
         - wordpress
 
     - name: Create a Docker network for WordPress and MariaDB
       community.docker.docker_network:
-        name: wp_network
+        name: "{{ item }}"
         driver: bridge
+      loop:
+        - wp_network
+        - db_network
 
-    - name: Run MariaDB Docker container
+    - name: Run MariaDB-Master Docker container
       community.docker.docker_container:
-        name: mariadb
-        image: mariadb:latest
+        name: mariadb-master
+        image: bitnami/mariadb-galera:latest
         state: started
+        healthcheck:
+          test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+          interval: 1m30s
+          timeout: 10s
+          retries: 3
+          start_period: 30s
         restart_policy: unless-stopped
         env:
-          MYSQL_ROOT_PASSWORD: somewordpress
-          MYSQL_DATABASE: wordpress
-          MYSQL_USER: wordpress
-          MYSQL_PASSWORD: wordpress
+          MARIADB_ROOT_PASSWORD: somewordpress
+          MARIADB_DATABASE: wordpress
+          MARIADB_USER: wordpress
+          MARIADB_PASSWORD: wordpress
+          ALLOW_EMPTY_PASSWORD: "yes"
+          MARIADB_GALERA_CLUSTER_BOOTSTRAP: "yes"
+          MARIADB_GALERA_FORCE_SAFETOBOOTSTRAP: "yes"
+          MARIADB_GALERA_CLUSTER_NAME: galera_cluster
+          MARIADB_GALERA_MARIABACKUP_USER: backup
+          MARIADB_GALERA_MARIABACKUP_PASSWORD: backup
+          MARIADB_REPLICATION_USER: replication
+          MARIADB_REPLICATION_PASSWORD: replication
         volumes:
           - "mariadb_data:/var/lib/mysql"
         networks:
           - name: wp_network
+          - name: db_network
+
+    - name: Run MariaDB-Slave Docker container
+      community.docker.docker_container:
+        name: mariadb-slave
+        image: bitnami/mariadb-galera:latest
+        state: started
+        healthcheck:
+          test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+          interval: 1m30s
+          timeout: 10s
+          retries: 3
+          start_period: 30s
+        restart_policy: unless-stopped
+        env:
+          MARIADB_ROOT_PASSWORD: somewordpress
+          MARIADB_DATABASE: wordpress
+          MARIADB_USER: wordpress
+          MARIADB_PASSWORD: wordpress
+          ALLOW_EMPTY_PASSWORD: "yes"
+          MARIADB_GALERA_CLUSTER_NAME: galera_cluster 
+          MARIADB_GALERA_CLUSTER_ADDRESS: "gcomm://mariadb-master"
+          MARIADB_GALERA_MARIABACKUP_USER: backup
+          MARIADB_GALERA_MARIABACKUP_PASSWORD: backup
+          MARIADB_REPLICATION_USER: replication
+          MARIADB_REPLICATION_PASSWORD: replication
+        volumes:
+          - "mariadb_data:/var/lib/mysql"
+        networks:
+          - name: db_network
 
     - name: Run Wordpress Docker container
       community.docker.docker_container:
@@ -115,7 +162,7 @@
         state: started
         restart_policy: unless-stopped
         env:
-          WORDPRESS_DB_HOST: mariadb
+          WORDPRESS_DB_HOST: mariadb-master
           WORDPRESS_DB_USER: wordpress
           WORDPRESS_DB_PASSWORD: wordpress
           WORDPRESS_DB_NAME: wordpress

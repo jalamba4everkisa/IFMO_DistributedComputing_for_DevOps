@@ -82,35 +82,43 @@
         project_src: /opt/wordpress
         state: absent
 
-    - name: run dokcer compose (v2)
+    - name: run docker compose (v2)
       community.docker.docker_compose_v2:
         project_src: /opt/wordpress
         state: present
 
-    - name: Wait for db-master to be ready
-      wait_for:
-        host: 127.0.0.1
-        port: 3306
-        delay: 5
-        timeout: 120
+    - name: Wait for db-master to become healthy
+      community.docker.docker_container_info:
+        name: db-master
+      register: master_info
+      until: master_info.container.State.Health is defined and master_info.container.State.Health.Status == "healthy"
+      retries: 15
+      delay: 5
 
-    - name: Wait for db-slave to be ready
-      wait_for:
-        host: 127.0.0.1
-        port: 3307
-        delay: 5
-        timeout: 120
+    - name: Wait for db-slave to become healthy
+      community.docker.docker_container_info:
+        name: db-slave
+      register: slave_info
+      until: slave_info.container.State.Health is defined and slave_info.container.State.Health.Status == "healthy"
+      retries: 15
+      delay: 5
 
-    - name: Show db-master logs
-      shell: docker logs db-master | tail -n 20
-      ignore_errors: true
-
-    - name: Show db-slave logs
-      shell: docker logs db-slave | tail -n 20
-      ignore_errors: true
-
-    - name: Verify Galera status
+    - name: Verify Galera cluster size
       shell: >
-        docker exec db-master mysql -uroot -psupersecure \
+        docker exec db-master /opt/bitnami/mariadb/bin/mariadb -uroot -psupersecure \
         -e "SHOW STATUS LIKE 'wsrep_cluster_size';"
       register: galera_status
+      retries: 10
+      delay: 6
+      until: galera_status.rc == 0
+      ignore_errors: false
+
+    - name: Verify wsrep_ready on db-master
+      shell: >
+        docker exec db-master /opt/bitnami/mariadb/bin/mariadb -uroot -psupersecure \
+        -e "SHOW STATUS LIKE 'wsrep_ready';"
+      register: wsrep_ready
+      retries: 10
+      delay: 5
+      until: wsrep_ready.stdout is search('ON')
+      ignore_errors: false

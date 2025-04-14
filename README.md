@@ -62,19 +62,8 @@ touch inventory.ini
 <IP-адрес вашего сервера> ansible_user=your_user ansible_ssh_private_key_file=~/.ssh/id_rsa ansible_python_interpreter=/usr/bin/python3.12
 ```
 
-3. Отредактируйте `.env` (указанные логин и пароли предоставлены в качестве примера):
-
-```env
-MYSQL_DATABASE=wpdb
-MYSQL_USER=wpuser
-MYSQL_PASSWORD=change_me_ple4se
-MYSQL_ROOT_PASSWORD=rootP4ssw0rd!
-
-WORDPRESS_DB_NAME=wpdb
-WORDPRESS_DB_USER=wpuser
-WORDPRESS_DB_PASSWORD=change_me_ple4se
-WORDPRESS_DB_HOST=db:3306
-```
+3. Создайте `.env` файл в котором укажите требуемый набор секретов, пример файла есть в репозитории '_.env'
+Все секреты указанные в файле '_.env' должны быть изменены, в целях обеспечения безопасности.
 
 4. Запустите Ansible:
 

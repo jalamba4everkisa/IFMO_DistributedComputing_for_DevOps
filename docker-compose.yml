@@ -17,6 +17,8 @@ services:
       - MARIADB_REPLICATION_PASSWORD=repl_pass
     volumes:
       - db_master_data:/bitnami/mariadb
+    ports:
+      - "3306:3306"
     networks:
       - wpnet
 
@@ -37,6 +39,8 @@ services:
       - MARIADB_REPLICATION_PASSWORD=repl_pass
     volumes:
       - db_slave_data:/bitnami/mariadb
+    ports:
+      - "3307:3306"
     networks:
       - wpnet
 

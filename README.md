@@ -15,7 +15,7 @@ Distributed Computing course for DevOps 2025
 ## Структура проекта
 
 ```
-├── .env                  # Переменные окружения для WordPress и MariaDB
+├── _.env                  # Переменные окружения для WordPress и MariaDB
 ├── .gitignore            # Исключения для Git (например, inventory.ini)
 ├── docker-compose.yml    # Описание Docker-сервисов
 ├── LICENSE               # Файл с данными по лизении

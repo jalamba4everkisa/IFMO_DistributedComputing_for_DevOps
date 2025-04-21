@@ -1,0 +1,33 @@
+---
+
+- name: Ensure Docker is running and enabled
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Delete content
+  ansible.builtin.file:
+    state: absent
+    path: /tmp/mariadb_backups
+
+- name: Create backup directory on host if doesn't exist
+  file:
+    path: /tmp/mariadb_backups
+    state: directory
+    mode: '0755'
+
+- name: Create database backup
+  community.docker.docker_container_exec:
+    container: mariadb
+    command: >
+      bash -c "mariadb-dump --all-databases -u root -p"{{ mariadb_vars.root_password }}" > tmp/db.sql"
+
+- name: Get info from backup
+  ansible.builtin.command: "docker exec mariadb sh -c 'cat /tmp/db.sql'"
+  register: backup
+
+- name: Create db.sql on host
+  ansible.builtin.copy:
+    dest: "/tmp/mariadb_backups/db.sql"
+    content: "{{ backup.stdout }}"

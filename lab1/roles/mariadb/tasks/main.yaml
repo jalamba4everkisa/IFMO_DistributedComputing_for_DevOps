@@ -1,5 +1,5 @@
 ---
-- name: Run MariaDB-Master Docker container
+- name: Run MariaDB Docker container
   community.docker.docker_container:
     name: mariadb
     image: bitnami/mariadb-galera:latest

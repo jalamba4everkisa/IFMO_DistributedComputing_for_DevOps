@@ -9,25 +9,31 @@
 - name: Delete content
   ansible.builtin.file:
     state: absent
-    path: /tmp/mariadb_backups
+    path: "{{ backup_dest }}"
 
 - name: Create backup directory on host if doesn't exist
   file:
-    path: /tmp/mariadb_backups
+    path: "{{ backup_dest }}"
     state: directory
     mode: '0755'
 
-- name: Create database backup
-  community.docker.docker_container_exec:
-    container: mariadb
-    command: >
-      bash -c "mariadb-dump --all-databases -u root -p"{{ mariadb_vars.root_password }}" > tmp/db.sql"
+- name: Install MariaDB client
+  ansible.builtin.apt:
+    name: mariadb-client
+    state: present
+  become: yes
 
-- name: Get info from backup
-  ansible.builtin.command: "docker exec mariadb sh -c 'cat /tmp/db.sql'"
-  register: backup
+- name: Install PyMySQL
+  ansible.builtin.apt:
+    name: python3-pymysql
+    state: present
+  become: yes
 
-- name: Create db.sql on host
-  ansible.builtin.copy:
-    dest: "/tmp/mariadb_backups/db.sql"
-    content: "{{ backup.stdout }}"
+- name: Dump databases using mysql_db module
+  community.mysql.mysql_db:
+    name: all
+    login_user: root
+    login_password: "{{ mariadb_vars.root_password }}"
+    state: dump
+    target: /tmp/mariadb_backups/db.sql
+    single_transaction: yes

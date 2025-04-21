@@ -1,5 +1,13 @@
 ---
 
+- name: Ensure MariaDB volumes exist
+  community.docker.docker_volume:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - mariadb_master_data
+    - mariadb_slave_data
+
 - name: Create a Docker network for MariaDB Cluster
   community.docker.docker_network:
     name: "{{ item }}"
@@ -7,10 +15,13 @@
   loop:
     - mariadb_network
 
-- name: Stop Wordpress
+- name: Stop Wordpress and MariaDB
   community.docker.docker_container:
-    name: wordpress
+    name: "{{ item }}"
     state: stopped
+  loop:
+    - wordpress
+    - mariadb
 
 - name: Run MariaDB-Master Docker container with Galera cluster and restore backup
   community.docker.docker_container:
@@ -20,7 +31,7 @@
     restart_policy: unless-stopped
     volumes:
       - "mariadb_master_data:/var/lib/mysql"
-      - "/tmp/mariadb_backups:/docker-entrypoint-initdb.d"
+      - "{{ backup_dest }}:/docker-entrypoint-initdb.d"
     networks:
       - name: wp_network
       - name: mariadb_network
@@ -35,6 +46,8 @@
       MARIADB_REPLICATION_PASSWORD: "{{ mariadb_vars.replication_password }}"
       MARIADB_GALERA_CLUSTER_BOOTSTRAP: "yes"
       MARIADB_GALERA_FORCE_SAFETOBOOTSTRAP: "yes"
+    ports:
+      - "3306:3306"
 
 - name: Run MariaDB-Slave Docker container joining Galera cluster
   community.docker.docker_container:

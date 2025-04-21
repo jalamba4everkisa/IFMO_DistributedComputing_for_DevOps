@@ -1,4 +1,10 @@
 ---
+
+- name: Ensure Wordpress volume exists
+  community.docker.docker_volume:
+    name: wordpress_data
+    state: present
+
 - name: Run Wordpress Docker container
   community.docker.docker_container:
     name: wordpress
@@ -14,3 +20,5 @@
       - "80:80"
     networks:
       - name: wp_network
+    volumes:
+      - "wordpress_data:/var/www/html/"

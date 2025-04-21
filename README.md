@@ -23,4 +23,4 @@ ansible-playbook -i inventory/production/hosts site.yaml --ask-vault-pass
 
 Создал плейбук, который заходит на целевую машину с установленым в Docker MariaDB и Wordpress.
 Во время работы делает бэкап БД, после чего гасит контейнер с Wordpress, создаёт мастер и слейв ноду в контейнерах MariaDB, после чего восстанавливает бэкап и запускает контейнер с Wordpress.
-Команда та же для запуска, пароль для group_vars/all_example.yaml тот же.
+Команда та же для запуска, пароль для group_vars/all.yaml тот же.

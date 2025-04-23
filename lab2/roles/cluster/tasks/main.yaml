@@ -15,13 +15,16 @@
   loop:
     - mariadb_network
 
-- name: Stop Wordpress and MariaDB
+- name: Stop Wordpress container
   community.docker.docker_container:
-    name: "{{ item }}"
+    name: wordpress
     state: stopped
-  loop:
-    - wordpress
-    - mariadb
+
+- name: Stop and Remove old MariaDB container
+  community.docker.docker_container:
+    name: mariadb
+    state: absent
+    
 
 - name: Run MariaDB-Master Docker container with Galera cluster and restore backup
   community.docker.docker_container:

@@ -1,3 +1,1 @@
-lab1/inventory/production/hosts
-lab2/inventory/production/hosts
-playbook.yaml
+lab*/inventory/production/hosts

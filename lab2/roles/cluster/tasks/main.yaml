@@ -6,7 +6,7 @@
     state: present
   loop:
     - mariadb_master_data
-    - mariadb_slave_data
+    - mariadb_slave_1_data
 
 - name: Create a Docker network for MariaDB Cluster
   community.docker.docker_network:
@@ -20,12 +20,22 @@
     name: wordpress
     state: stopped
 
+- name: Check if mariadb container exists
+  community.docker.docker_container_info:
+    name: mariadb
+  register: result
+
 - name: Stop and Remove old MariaDB container
   community.docker.docker_container:
     name: mariadb
     state: absent
-    
+  when: result.exists
 
+- name: Check if mariadb-master container exists
+  community.docker.docker_container_info:
+    name: mariadb-master
+  register: result
+    
 - name: Run MariaDB-Master Docker container with Galera cluster and restore backup
   community.docker.docker_container:
     name: mariadb-master
@@ -51,15 +61,18 @@
       MARIADB_GALERA_FORCE_SAFETOBOOTSTRAP: "yes"
     ports:
       - "3306:3306"
+  when:
+    - not result.exists
+    
 
-- name: Run MariaDB-Slave Docker container joining Galera cluster
+- name: Run MariaDB-Slave-1 Docker container joining Galera cluster
   community.docker.docker_container:
-    name: mariadb-slave
+    name: mariadb-slave-1
     image: bitnami/mariadb-galera:latest
     state: started
     restart_policy: unless-stopped
     volumes:
-      - "mariadb_slave_data:/var/lib/mysql"
+      - "mariadb_slave_1_data:/var/lib/mysql"
     networks:
       - name: mariadb_network
     env:

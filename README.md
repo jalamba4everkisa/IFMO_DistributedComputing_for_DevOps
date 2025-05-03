@@ -32,3 +32,7 @@ ansible-playbook -i inventory/production/hosts site.yaml --ask-vault-pass
 ansible-playbook -i inventory/production/hosts site.yaml
 ```
 Пароль не требуется, переменных окружения нет.
+
+Лабораторная работа 4.
+
+Добавляет кол-во слейвов в кластере Galera. Также поднимает контейнер с Haproxy, который балансирует между всеми нодами mariadb подключение wordpress.

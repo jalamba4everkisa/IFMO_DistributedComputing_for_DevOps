@@ -1,18 +1,63 @@
 ---
 - name: Home work 4
   hosts: carrier
+  become: yes
   tasks:
-    - name: Display Configuration Variables
-      ansible.builtin.debug:
-        msg:
-          - "wordpress: {{ is_wordpress }}" # True or False
-          - "wordpress_port: {{ wordpress_port }}" # 80 or 8080 or whatewer
-          - "wordpress_db_name: {{ wordpress_db_name }}" # WP database name
-          - "db1_host: {{ db1_host }}" # container name
-          - "db2_host: {{ db2_host }}" # container name
-          - "db3_host: {{ db3_host }}" # container name
-          - "db4_host: {{ db4_host }}" # container name
-          - "db5_host: {{ db5_host }}" # container name
-          - "db_pass: {{ db_pass }}" # root password for DBs
-          - "loadbalancer: {{ loadbalancer }}" # container name
-          - "monitoring_url: {{ monitoring_url }}" # monitoring url including port
+    - name: Ensure MariaDB volumes exist
+      community.docker.docker_volume:
+        name: "{{ item.volume }}"
+        state: present
+      loop: "{{ mariadb_vars.mariadb_slaves }}"
+
+    - name: Run additional MariaDB-Slave Docker containers joining Galera cluster
+      community.docker.docker_container:
+        name: "{{ item.name }}"
+        image: bitnami/mariadb-galera:latest
+        state: started
+        restart_policy: unless-stopped
+        volumes:
+          - "{{ item.volume }}:/var/lib/mysql"
+        networks:
+          - name: mariadb_network
+        env:
+          MARIADB_GALERA_MARIABACKUP_PASSWORD: "{{ mariadb_vars.backup_password }}"
+          MARIADB_ROOT_PASSWORD: "{{ mariadb_vars.root_password }}"
+          MARIADB_GALERA_CLUSTER_NAME: "{{ mariadb_vars.galera_cluster }}"
+          MARIADB_GALERA_CLUSTER_ADDRESS: "gcomm://mariadb-master"
+          MARIADB_REPLICATION_USER: "{{ mariadb_vars.replication_user }}"
+          MARIADB_REPLICATION_PASSWORD: "{{ mariadb_vars.replication_password }}"
+      loop: "{{ mariadb_vars.mariadb_slaves }}"
+    - name: Run Haproxy
+      community.docker.docker_container:
+        name: haproxy
+        image: haproxy:latest
+        state: started
+        restart_policy: unless-stopped
+        volumes:
+          - /opt/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+        networks:
+          - name: mariadb_network
+          - name: wp_network
+
+    - name: Stop Wordpress container
+      community.docker.docker_container:
+        name: wordpress
+        state: stopped
+
+    - name: Run Wordpress Docker container and connect it to Haproxy
+      community.docker.docker_container:
+        name: wordpress
+        image: wordpress:latest
+        state: started
+        restart_policy: unless-stopped
+        env:
+          WORDPRESS_DB_HOST: "{{ wp_vars.db_host }}"
+          WORDPRESS_DB_USER: "{{ mariadb_and_wp_vars.user }}"
+          WORDPRESS_DB_PASSWORD: "{{ mariadb_and_wp_vars.password }}"
+          WORDPRESS_DB_NAME: "{{ mariadb_and_wp_vars.database }}"
+        ports:
+          - "80:80"
+        networks:
+          - name: wp_network
+        volumes:
+          - "wordpress_data:/var/www/html/"

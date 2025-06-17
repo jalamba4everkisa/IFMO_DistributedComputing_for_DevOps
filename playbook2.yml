@@ -1,13 +1,143 @@
 ---
 - name: Home work 2
   hosts: carrier
+  become: yes
   tasks:
-    - name: Display Configuration Variables
-      ansible.builtin.debug:
-        msg:
-          - "wordpress: {{ is_wordpress }}" # True or False
-          - "wordpress_port: {{ wordpress_port }}" # 80 or 8080 or whatewer
-          - "wordpress_db_name: {{ wordpress_db_name }}" # WP database name
-          - "db_master: {{ db_master }}" # container name
-          - "db_replica: {{ db_replica }}" # container name
-          - "db_pass: {{ db_pass }}" # root password for master and replica
+    - name: Ensure Docker is running and enabled
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Delete content
+      ansible.builtin.file:
+        state: absent
+        path: "{{ backup_dest }}"
+
+    - name: Create backup directory on host if doesn't exist
+      file:
+        path: "{{ backup_dest }}"
+        state: directory
+        mode: '0755'
+
+    - name: Install MariaDB client
+      ansible.builtin.apt:
+        name: mariadb-client
+        state: present
+      become: yes
+
+    - name: Install PyMySQL
+      ansible.builtin.apt:
+        name: python3-pymysql
+        state: present
+      become: yes
+
+    - name: Dump databases using mysql_db module
+      community.mysql.mysql_db:
+        name: all
+        login_user: root
+        login_password: "{{ mariadb_vars.root_password }}"
+        state: dump
+        target: /tmp/mariadb_backups/db.sql
+        single_transaction: yes
+
+    - name: Ensure MariaDB volumes exist
+      community.docker.docker_volume:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - mariadb_master_data
+        - mariadb_slave_1_data
+
+    - name: Create a Docker network for MariaDB Cluster
+      community.docker.docker_network:
+        name: "{{ item }}"
+        driver: bridge
+      loop:
+        - mariadb_network
+
+    - name: Stop Wordpress container
+      community.docker.docker_container:
+        name: wordpress
+        state: stopped
+
+    - name: Check if mariadb container exists
+      community.docker.docker_container_info:
+        name: "{{ mariadb_vars.db_host_original }}"
+      register: result
+
+    - name: Stop and Remove old MariaDB container
+      community.docker.docker_container:
+        name: "{{ mariadb_vars.db_host_original }}"
+        state: absent
+      when: result.exists
+
+    - name: Check if mariadb-master container exists
+      community.docker.docker_container_info:
+        name: mariadb-master
+      register: result
+        
+    - name: Run MariaDB-Master Docker container with Galera cluster and restore backup
+      community.docker.docker_container:
+        name: mariadb-master
+        image: bitnami/mariadb-galera:latest
+        state: started
+        restart_policy: unless-stopped
+        volumes:
+          - "mariadb_master_data:/var/lib/mysql"
+          - "{{ backup_dest }}:/docker-entrypoint-initdb.d"
+        networks:
+          - name: wp_network
+          - name: mariadb_network
+        env:
+          MARIADB_GALERA_MARIABACKUP_PASSWORD: "{{ mariadb_vars.backup_password }}"
+          MARIADB_ROOT_PASSWORD: "{{ mariadb_vars.root_password }}"
+          MARIADB_DATABASE: "{{ mariadb_and_wp_vars.database }}"
+          MARIADB_USER: "{{ mariadb_and_wp_vars.user }}"
+          MARIADB_PASSWORD: "{{ mariadb_and_wp_vars.password }}"
+          MARIADB_GALERA_CLUSTER_NAME: "{{ mariadb_vars.galera_cluster }}"
+          MARIADB_REPLICATION_USER: "{{ mariadb_vars.replication_user }}"
+          MARIADB_REPLICATION_PASSWORD: "{{ mariadb_vars.replication_password }}"
+          MARIADB_GALERA_CLUSTER_BOOTSTRAP: "yes"
+          MARIADB_GALERA_FORCE_SAFETOBOOTSTRAP: "yes"
+        ports:
+          - "3306:3306"
+      when:
+        - not result.exists
+        
+
+    - name: Run MariaDB-Slave-1 Docker container joining Galera cluster
+      community.docker.docker_container:
+        name: mariadb-slave-1
+        image: bitnami/mariadb-galera:latest
+        state: started
+        restart_policy: unless-stopped
+        volumes:
+          - "mariadb_slave_1_data:/var/lib/mysql"
+        networks:
+          - name: mariadb_network
+        env:
+          MARIADB_GALERA_MARIABACKUP_PASSWORD: "{{ mariadb_vars.backup_password }}"
+          MARIADB_ROOT_PASSWORD: "{{ mariadb_vars.root_password }}"
+          MARIADB_GALERA_CLUSTER_NAME: "{{ mariadb_vars.galera_cluster }}"
+          MARIADB_GALERA_CLUSTER_ADDRESS: "gcomm://mariadb-master"
+          MARIADB_REPLICATION_USER: "{{ mariadb_vars.replication_user }}"
+          MARIADB_REPLICATION_PASSWORD: "{{ mariadb_vars.replication_password }}"
+
+    - name: Run Wordpress Docker container
+      community.docker.docker_container:
+        name: wordpress
+        image: wordpress:latest
+        state: started
+        restart_policy: unless-stopped
+        env:
+          WORDPRESS_DB_HOST: "{{ mariadb_vars.db_host }}"
+          WORDPRESS_DB_USER: "{{ mariadb_and_wp_vars.user }}"
+          WORDPRESS_DB_PASSWORD: "{{ mariadb_and_wp_vars.password }}"
+          WORDPRESS_DB_NAME: "{{ mariadb_and_wp_vars.database }}"
+        ports:
+          - "80:80"
+        networks:
+          - name: wp_network
+        volumes:
+          - "wordpress_data:/var/www/html/"

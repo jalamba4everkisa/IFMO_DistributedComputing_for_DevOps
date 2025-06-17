@@ -7,7 +7,7 @@
 
 - name: Run MariaDB Docker container
   community.docker.docker_container:
-    name: mariadb
+    name: "{{ mariadb.db_host_original }}"
     image: bitnami/mariadb-galera:latest
     state: started
     restart_policy: unless-stopped

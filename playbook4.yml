@@ -41,6 +41,18 @@
           MARIADB_REPLICATION_USER: "{{ mariadb_vars.replication_user }}"
           MARIADB_REPLICATION_PASSWORD: "{{ mariadb_vars.replication_password }}"
       loop: "{{ mariadb_vars.mariadb_slaves }}"
+
+    - name: Create folder
+      ansible.builtin.file:
+        path: /opt/haproxy
+        state: directory
+        mode: '0755'
+
+    - name: Copy Haproxy config
+      ansible.builtin.copy:
+        src: haproxy.cfg
+        dest: /opt/haproxy/haproxy.cfg
+
     - name: Run Haproxy
       community.docker.docker_container:
         name: haproxy

@@ -3,6 +3,20 @@
   hosts: carrier
   become: yes
   tasks:
+    - name: Display Configuration Variables
+      ansible.builtin.debug:
+        msg:
+          - "wordpress: True" # True or False
+          - "wordpress_port: 80" # 80 or 8080 or whatewer
+          - "wordpress_db_name: {{ mariadb_and_wp_vars.database }}" # WP database name
+          - "db1_host: mariadb-master" # container name
+          - "db2_host: mariadb-slave-1" # container name
+          - "db3_host: mariadb-slave-2" # container name
+          - "db4_host: mariadb-slave-3" # container name
+          - "db5_host: mariadb-slave-4" # container name
+          - "db_pass: {{ mariadb_vars.root_password }}" # root password for DBs
+          - "loadbalancer: haproxy" # container name
+          - "monitoring_url: localhost:3000"
     - name: Ensure MariaDB volumes exist
       community.docker.docker_volume:
         name: "{{ item.volume }}"

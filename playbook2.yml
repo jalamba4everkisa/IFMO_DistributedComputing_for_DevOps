@@ -3,6 +3,15 @@
   hosts: carrier
   become: yes
   tasks:
+    - name: Display Configuration Variables
+      ansible.builtin.debug:
+        msg:
+          - "wordpress: True" # True or False
+          - "wordpress_port: 80" # 80 or 8080 or whatewer
+          - "wordpress_db_name: {{ mariadb_and_wp_vars.database }}" # WP database name
+          - "db_master: {{ mariadb_vars.mariadb-master }}" # container name
+          - "db_replica: mariadb-slave-1" # container name
+          - "db_pass: {{ mariadb_vars.root_password  }}" # root password for master and replica
     - name: Ensure Docker is running and enabled
       ansible.builtin.service:
         name: docker

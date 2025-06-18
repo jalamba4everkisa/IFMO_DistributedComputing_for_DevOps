@@ -3,6 +3,14 @@
   hosts: carrier
   become: yes
   tasks:
+    - name: Display Configuration Variables
+      ansible.builtin.debug:
+        msg:
+          - "wordpress: True" # True or False
+          - "wordpress_port: 80" # 80 or 8080 or whatewer
+          - "wordpress_db_name: {{ mariadb_and_wp_vars.database }}" # WP database name
+          - "db_host: {{ mariadb_vars.db_host_original }}" # container name
+          - "db_pass: {{ mariadb_vars.root_password }}" # root password
     - name: Update repositories
       ansible.builtin.apt:
         update_cache: yes

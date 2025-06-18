@@ -3,6 +3,10 @@
   hosts: carrier
   become: yes
   tasks:
+    - name: Display Configuration Variables
+      ansible.builtin.debug:
+        msg:
+          - "monitoring_url: localhost:3000"
     - name: Create a Docker network for monitoring
       community.docker.docker_network:
         name: monitoring_network
